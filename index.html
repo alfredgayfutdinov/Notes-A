@@ -1,0 +1,1689 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0b0d14" />
+  <title>Заметки</title>
+  <style>
+    :root {
+      --bg-main: #0b0d14;
+      --bg-panel: rgba(18, 22, 34, 0.88);
+      --bg-card: rgba(255, 255, 255, 0.035);
+      --bg-card-hover: rgba(255, 255, 255, 0.065);
+      --bg-card-active: rgba(56, 189, 248, 0.12);
+      --border: rgba(255, 255, 255, 0.08);
+      --border-active: rgba(56, 189, 248, 0.45);
+      --accent-blue: #38bdf8;
+      --accent-violet: #a855f7;
+      --accent-cyan: #2dd4bf;
+      --accent-warn: #facc15;
+      --accent-danger: #f87171;
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --radius: 14px;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background:
+        radial-gradient(circle at 12% 10%, rgba(168, 85, 247, 0.14), transparent 38%),
+        radial-gradient(circle at 88% 90%, rgba(56, 189, 248, 0.12), transparent 40%),
+        var(--bg-main);
+      color: var(--text-primary);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+      overflow: hidden;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 330px 1fr;
+      height: 100vh;
+      height: 100dvh;
+      max-width: 1440px;
+      margin: 0 auto;
+    }
+
+    /* Левая панель */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-panel);
+      border-right: 1px solid var(--border);
+      backdrop-filter: blur(16px);
+      min-width: 0;
+      height: 100%;
+    }
+
+    .sidebar-header {
+      padding: 12px 14px 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      font-size: 16px;
+      letter-spacing: 0.02em;
+    }
+
+    .brand-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--accent-cyan);
+      box-shadow: 0 0 10px var(--accent-cyan);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .notif-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      border-radius: 999px;
+      padding: 4px 9px;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+
+    .notif-btn:hover {
+      color: var(--text-primary);
+      border-color: var(--border-active);
+    }
+
+    .notif-btn.granted {
+      color: var(--accent-cyan);
+      border-color: rgba(45, 212, 191, 0.35);
+      background: rgba(45, 212, 191, 0.1);
+    }
+
+    .sync-badge {
+      font-size: 11px;
+      padding: 4px 9px;
+      border-radius: 999px;
+      background: rgba(45, 212, 191, 0.12);
+      color: var(--accent-cyan);
+      border: 1px solid rgba(45, 212, 191, 0.25);
+      white-space: nowrap;
+    }
+
+    .sync-badge.saving {
+      background: rgba(250, 204, 21, 0.12);
+      color: var(--accent-warn);
+      border-color: rgba(250, 204, 21, 0.28);
+    }
+
+    .search-row {
+      padding: 0 14px 8px;
+      display: flex;
+      gap: 8px;
+    }
+
+    .search-input {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 11px;
+      color: var(--text-primary);
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+      min-width: 0;
+    }
+
+    .search-input:focus {
+      border-color: var(--accent-blue);
+    }
+
+    .btn-new-desktop {
+      background: linear-gradient(135deg, var(--accent-blue), #2563eb);
+      color: #06101d;
+      font-weight: 700;
+      border: none;
+      border-radius: 10px;
+      padding: 0 13px;
+      font-size: 18px;
+      cursor: pointer;
+      transition: transform 0.12s, opacity 0.2s;
+    }
+
+    .btn-new-desktop:hover {
+      opacity: 0.92;
+    }
+
+    .btn-new-desktop:active {
+      transform: scale(0.96);
+    }
+
+    .filter-row {
+      padding: 0 14px 10px;
+      display: flex;
+      gap: 6px;
+    }
+
+    .filter-chip {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      border-radius: 8px;
+      padding: 5px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .filter-chip.active {
+      background: rgba(56, 189, 248, 0.14);
+      border-color: var(--border-active);
+      color: var(--accent-blue);
+      font-weight: 600;
+    }
+
+    .notes-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 4px 12px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .note-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      user-select: none;
+    }
+
+    .note-card:hover {
+      background: var(--bg-card-hover);
+    }
+
+    .note-card.active {
+      background: var(--bg-card-active);
+      border-color: var(--border-active);
+    }
+
+    .note-card.due {
+      border-color: rgba(250, 204, 21, 0.55);
+      background: rgba(250, 204, 21, 0.07);
+    }
+
+    .note-card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    .note-card-title {
+      font-weight: 600;
+      font-size: 14.5px;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .badges-right {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-shrink: 0;
+    }
+
+    .pin-mark {
+      color: var(--accent-blue);
+      font-size: 12px;
+    }
+
+    .rem-tag {
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 6px;
+      background: rgba(56, 189, 248, 0.12);
+      color: var(--accent-blue);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+    }
+
+    .rem-tag.due {
+      background: rgba(250, 204, 21, 0.18);
+      color: var(--accent-warn);
+      border-color: rgba(250, 204, 21, 0.45);
+      font-weight: 600;
+    }
+
+    .rem-tag.done {
+      background: rgba(148, 163, 184, 0.12);
+      color: var(--text-muted);
+      border-color: var(--border);
+    }
+
+    .note-card-preview {
+      font-size: 13px;
+      color: var(--text-secondary);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      line-height: 1.4;
+      min-height: 18px;
+    }
+
+    .note-card-meta {
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .quick-snooze-inline {
+      display: flex;
+      gap: 4px;
+      margin-top: 8px;
+    }
+
+    .mini-act-btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    .mini-act-btn:hover {
+      border-color: var(--accent-blue);
+    }
+
+    .empty-list {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 13.5px;
+      padding: 36px 16px;
+      line-height: 1.5;
+    }
+
+    /* Правая панель редактора */
+    .editor-pane {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      min-width: 0;
+      background: rgba(11, 13, 20, 0.55);
+    }
+
+    .editor-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(18, 22, 34, 0.55);
+      backdrop-filter: blur(12px);
+    }
+
+    .toolbar-left, .toolbar-right {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .btn-back {
+      display: none;
+    }
+
+    .tool-btn {
+      background: rgba(255, 255, 255, 0.045);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      border-radius: 9px;
+      padding: 6px 10px;
+      font-size: 12.5px;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .tool-btn:hover {
+      background: rgba(255, 255, 255, 0.09);
+      color: var(--text-primary);
+    }
+
+    .tool-btn.active {
+      border-color: var(--border-active);
+      color: var(--accent-blue);
+      background: rgba(56, 189, 248, 0.12);
+    }
+
+    .tool-btn.danger:hover {
+      border-color: rgba(248, 113, 113, 0.45);
+      color: var(--accent-danger);
+      background: rgba(248, 113, 113, 0.12);
+    }
+
+    .editor-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 18px 22px 36px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-width: 860px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    /* Умная подсказка распознанного времени из текста */
+    .smart-time-hint {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      background: rgba(168, 85, 247, 0.12);
+      border: 1px solid rgba(168, 85, 247, 0.38);
+      border-radius: 11px;
+      padding: 8px 12px;
+      font-size: 12.5px;
+      color: #f3e8ff;
+    }
+
+    .smart-time-hint.visible {
+      display: flex;
+    }
+
+    .smart-hint-left {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      flex-wrap: wrap;
+    }
+
+    .smart-hint-match {
+      color: var(--accent-cyan);
+      font-weight: 600;
+    }
+
+    .smart-hint-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-apply-time {
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+      color: #06101d;
+      border: none;
+      border-radius: 7px;
+      padding: 5px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .btn-dismiss-time {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      color: var(--text-secondary);
+      border-radius: 7px;
+      padding: 4px 8px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    /* Блок напоминания в редакторе */
+    .reminder-panel {
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 12px;
+    }
+
+    .reminder-panel.open {
+      display: flex;
+    }
+
+    .reminder-panel.due {
+      border-color: rgba(250, 204, 21, 0.5);
+      background: rgba(250, 204, 21, 0.07);
+    }
+
+    .reminder-controls {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .dt-input {
+      background: rgba(11, 13, 20, 0.8);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 9px;
+      color: var(--text-primary);
+      font-size: 13px;
+      color-scheme: dark;
+    }
+
+    .preset-btn {
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      color: var(--accent-blue);
+      border-radius: 8px;
+      padding: 6px 9px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .preset-btn:hover {
+      background: rgba(56, 189, 248, 0.2);
+    }
+
+    .preset-btn.clear {
+      background: rgba(248, 113, 113, 0.1);
+      border-color: rgba(248, 113, 113, 0.25);
+      color: var(--accent-danger);
+    }
+
+    .due-banner {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding-top: 6px;
+      border-top: 1px dashed rgba(250, 204, 21, 0.35);
+      font-size: 12.5px;
+      color: var(--accent-warn);
+    }
+
+    .due-banner.visible {
+      display: flex;
+    }
+
+    .due-actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .note-title-input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text-primary);
+      font-size: 21px;
+      font-weight: 700;
+      width: 100%;
+      padding: 0;
+    }
+
+    .note-title-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .note-textarea {
+      flex: 1;
+      min-height: 200px;
+      background: transparent;
+      border: none;
+      outline: none;
+      resize: none;
+      color: #e2e8f0;
+      font-size: 15px;
+      line-height: 1.65;
+      font-family: inherit;
+      width: 100%;
+    }
+
+    .note-textarea::placeholder {
+      color: var(--text-muted);
+    }
+
+    /* Чек-лист внутри заметки */
+    .checklist-box {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      border-top: 1px solid var(--border);
+      padding-top: 12px;
+    }
+
+    .chk-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 7px 10px;
+    }
+
+    .chk-row input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent-cyan);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .chk-text {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text-primary);
+      font-size: 14.5px;
+    }
+
+    .chk-row.done .chk-text {
+      text-decoration: line-through;
+      color: var(--text-muted);
+    }
+
+    .chk-del {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 16px;
+      padding: 2px 6px;
+    }
+
+    .chk-del:hover {
+      color: var(--accent-danger);
+    }
+
+    .editor-placeholder {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      gap: 12px;
+      padding: 24px;
+      text-align: center;
+    }
+
+    .fab-new {
+      display: none;
+    }
+
+    @media (max-width: 760px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        border-right: none;
+      }
+
+      .btn-new-desktop {
+        display: none;
+      }
+
+      .fab-new {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: fixed;
+        right: 20px;
+        bottom: 22px;
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        border: none;
+        background: linear-gradient(135deg, var(--accent-blue), var(--accent-violet));
+        color: #fff;
+        font-size: 28px;
+        font-weight: 500;
+        box-shadow: 0 10px 26px rgba(56, 189, 248, 0.35);
+        cursor: pointer;
+        z-index: 20;
+      }
+
+      .editor-pane {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 30;
+        background: var(--bg-main);
+      }
+
+      .app.mobile-editing .editor-pane {
+        display: flex;
+      }
+
+      .app.mobile-editing .fab-new {
+        display: none;
+      }
+
+      .btn-back {
+        display: inline-flex;
+      }
+
+      .editor-body {
+        padding: 14px 14px 28px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app" id="app">
+    <!-- Список заметок -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="brand">
+          <span class="brand-dot"></span>
+          <span>Заметки</span>
+        </div>
+        <div class="header-actions">
+          <button class="notif-btn" id="btnNotifPerm" title="Разрешить системные уведомления">🔔 Уведомления</button>
+          <span class="sync-badge" id="syncStatus">Сохранено</span>
+        </div>
+      </div>
+
+      <div class="search-row">
+        <input
+          type="search"
+          class="search-input"
+          id="searchInput"
+          placeholder="Поиск по заметкам..."
+          autocomplete="off"
+        />
+        <button class="btn-new-desktop" id="btnNewDesktop" title="Новая заметка">+</button>
+      </div>
+
+      <div class="filter-row">
+        <button class="filter-chip active" id="filterAll">Все</button>
+        <button class="filter-chip" id="filterReminders">⏰ Напоминания</button>
+      </div>
+
+      <div class="notes-list" id="notesList"></div>
+    </aside>
+
+    <!-- Редактор -->
+    <main class="editor-pane" id="editorPane">
+      <div class="editor-toolbar" id="editorToolbar" style="display: none;">
+        <div class="toolbar-left">
+          <button class="tool-btn btn-back" id="btnBack">← Назад</button>
+          <button class="tool-btn" id="btnPin" title="Закрепить сверху">📌 Закрепить</button>
+          <button class="tool-btn" id="btnToggleReminder" title="Настроить напоминание">⏰ Напомнить</button>
+          <button class="tool-btn" id="btnAddCheck" title="Добавить пункт списка">☑ Пункт</button>
+        </div>
+        <div class="toolbar-right">
+          <button class="tool-btn" id="btnCopy" title="Скопировать текст">Копировать</button>
+          <button class="tool-btn danger" id="btnDelete" title="Удалить заметку">Удалить</button>
+        </div>
+      </div>
+
+      <div class="editor-body" id="editorBody" style="display: none;">
+        <!-- Умная подсказка распознанного времени -->
+        <div class="smart-time-hint" id="smartTimeHint">
+          <div class="smart-hint-left">
+            <span>💡 В тексте найдено:</span>
+            <span class="smart-hint-match" id="smartMatchText"></span>
+            <span>→</span>
+            <strong id="smartParsedLabel"></strong>
+          </div>
+          <div class="smart-hint-actions">
+            <button type="button" class="btn-apply-time" id="btnApplySmartTime">Поставить</button>
+            <button type="button" class="btn-dismiss-time" id="btnDismissSmartTime" title="Скрыть">×</button>
+          </div>
+        </div>
+
+        <div class="reminder-panel" id="reminderPanel">
+          <div class="reminder-controls">
+            <input type="datetime-local" class="dt-input" id="remindDtInput" />
+            <button type="button" class="preset-btn" id="preset1h">+1 час</button>
+            <button type="button" class="preset-btn" id="presetTomorrow">Завтра 09:00</button>
+            <button type="button" class="preset-btn clear" id="clearReminder">Сбросить</button>
+          </div>
+          <div class="due-banner" id="dueBanner">
+            <span id="dueBannerText">Время напоминания наступило</span>
+            <div class="due-actions">
+              <button type="button" class="preset-btn" id="snooze15">+15 мин</button>
+              <button type="button" class="preset-btn" id="snooze60">+1 час</button>
+              <button type="button" class="preset-btn" id="markRemDone">Готово</button>
+            </div>
+          </div>
+        </div>
+
+        <input
+          type="text"
+          class="note-title-input"
+          id="noteTitle"
+          placeholder="Заголовок заметки..."
+        />
+        <textarea
+          class="note-textarea"
+          id="noteText"
+          placeholder="Начните писать (например: Сегодня в 12:30 поехать на объект)..."
+        ></textarea>
+        <div class="checklist-box" id="checklistBox" style="display: none;"></div>
+      </div>
+
+      <div class="editor-placeholder" id="editorPlaceholder">
+        <div>Выберите заметку слева или создайте новую</div>
+        <button class="tool-btn active" id="btnNewEmpty">+ Создать заметку</button>
+      </div>
+    </main>
+
+    <button class="fab-new" id="btnNewMobile" title="Новая заметка">+</button>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "notes_app_v1";
+
+    const StorageAdapter = {
+      load() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          return raw ? JSON.parse(raw) : [];
+        } catch {
+          return [];
+        }
+      },
+      save(notes) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
+      }
+    };
+
+    let notes = StorageAdapter.load();
+    let activeNoteId = null;
+    let searchQuery = "";
+    let onlyReminders = false;
+    let reminderPanelOpen = false;
+    let saveTimer = null;
+    let currentSmartSuggestion = null;
+    const dismissedHintForText = new Map(); // noteId -> текст, для которого скрыта подсказка
+    const notifiedThisSession = new Set();
+
+    const appEl = document.getElementById("app");
+    const notesListEl = document.getElementById("notesList");
+    const searchInputEl = document.getElementById("searchInput");
+    const syncStatusEl = document.getElementById("syncStatus");
+    const btnNotifPermEl = document.getElementById("btnNotifPerm");
+
+    const filterAllEl = document.getElementById("filterAll");
+    const filterRemindersEl = document.getElementById("filterReminders");
+
+    const editorToolbarEl = document.getElementById("editorToolbar");
+    const editorBodyEl = document.getElementById("editorBody");
+    const editorPlaceholderEl = document.getElementById("editorPlaceholder");
+
+    const smartTimeHintEl = document.getElementById("smartTimeHint");
+    const smartMatchTextEl = document.getElementById("smartMatchText");
+    const smartParsedLabelEl = document.getElementById("smartParsedLabel");
+
+    const reminderPanelEl = document.getElementById("reminderPanel");
+    const remindDtInputEl = document.getElementById("remindDtInput");
+    const dueBannerEl = document.getElementById("dueBanner");
+    const dueBannerTextEl = document.getElementById("dueBannerText");
+
+    const noteTitleEl = document.getElementById("noteTitle");
+    const noteTextEl = document.getElementById("noteText");
+    const checklistBoxEl = document.getElementById("checklistBox");
+
+    const btnPinEl = document.getElementById("btnPin");
+    const btnToggleReminderEl = document.getElementById("btnToggleReminder");
+    const btnCopyEl = document.getElementById("btnCopy");
+
+    function generateId() {
+      return "note_" + Date.now() + "_" + Math.random().toString(36).slice(2, 7);
+    }
+
+    function formatTime(ts) {
+      if (!ts) return "";
+      const d = new Date(ts);
+      const now = new Date();
+      const isToday = d.toDateString() === now.toDateString();
+      return isToday
+        ? d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })
+        : d.toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit" });
+    }
+
+    function formatReminderShort(ts) {
+      if (!ts) return "";
+      const d = new Date(ts);
+      const now = new Date();
+      const tomorrow = new Date(now);
+      tomorrow.setDate(now.getDate() + 1);
+      const timeStr = d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+
+      if (d.toDateString() === now.toDateString()) return `Сегодня, ${timeStr}`;
+      if (d.toDateString() === tomorrow.toDateString()) return `Завтра, ${timeStr}`;
+      return `${d.toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit" })} ${timeStr}`;
+    }
+
+    function toDatetimeLocalValue(ts) {
+      if (!ts) return "";
+      const d = new Date(ts);
+      const pad = n => String(n).padStart(2, "0");
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+    // Разбор текста заголовка и заметки на предмет даты/времени
+    function parseReminderFromText(fullText, nowMs = Date.now()) {
+      const text = (fullText || "").trim();
+      if (!text) return null;
+
+      const now = new Date(nowMs);
+
+      // 1. "через полчаса"
+      const halfHourMatch = text.match(/\bчерез\s+полчаса\b/i);
+      if (halfHourMatch) {
+        const ts = nowMs + 30 * 60 * 1000;
+        return { ts, matchedPhrase: halfHourMatch[0] };
+      }
+
+      // 2. "через N минут / часов"
+      const relMatch = text.match(/\bчерез\s+(\d{1,3})\s*(мин|минуты|минут|ч|час|часа|часов)\b/i);
+      if (relMatch) {
+        const amount = parseInt(relMatch[1], 10);
+        const unit = relMatch[2].toLowerCase();
+        if (amount > 0) {
+          const ms = unit.startsWith("м") ? amount * 60 * 1000 : amount * 60 * 60 * 1000;
+          const ts = nowMs + ms;
+          return { ts, matchedPhrase: relMatch[0] };
+        }
+      }
+
+      // Вспомогательная функция разбора времени Ч:ММ или ЧЧ:ММ
+      const parseClock = (rawTime) => {
+        if (!rawTime) return null;
+        const m = rawTime.match(/^(\d{1,2})(?:[:.](\d{2}))?$/);
+        if (!m) return null;
+        const hh = parseInt(m[1], 10);
+        const mm = m[2] ? parseInt(m[2], 10) : 0;
+        if (hh > 23 || mm > 59) return null;
+        return { hh, mm };
+      };
+
+      // 3. Явная дата ДД.ММ[.ГГГГ] с опциональным временем
+      const dateMatch = text.match(/\b(\d{1,2})\.(\d{1,2})(?:\.(\d{2,4}))?(?:\s*(?:в|к|на)?\s*(\d{1,2}[:.]\d{2}))?\b/i);
+      if (dateMatch) {
+        const day = parseInt(dateMatch[1], 10);
+        const month = parseInt(dateMatch[2], 10) - 1;
+        let year = dateMatch[3] ? parseInt(dateMatch[3], 10) : now.getFullYear();
+        if (year < 100) year += 2000;
+
+        const clk = dateMatch[4] ? parseClock(dateMatch[4]) : { hh: 9, mm: 0 };
+        if (clk && month >= 0 && month <= 11 && day >= 1 && day <= 31) {
+          let target = new Date(year, month, day, clk.hh, clk.mm, 0, 0);
+          // Если год не указан и дата уже прошла в этом году — берём следующий год
+          if (!dateMatch[3] && target.getTime() < nowMs - 24 * 60 * 60 * 1000) {
+            target = new Date(year + 1, month, day, clk.hh, clk.mm, 0, 0);
+          }
+          if (target.getTime() > nowMs - 60 * 1000) {
+            return { ts: target.getTime(), matchedPhrase: dateMatch[0].trim() };
+          }
+        }
+      }
+
+      // 4. "сегодня" / "завтра" / "послезавтра" + время
+      const relDayMatch = text.match(/\b(сегодня|завтра|послезавтра)(?:\s+(?:в|к|на))?\s+(\d{1,2}(?:[:.]\d{2})?)\b/i);
+      if (relDayMatch) {
+        const word = relDayMatch[1].toLowerCase();
+        const clk = parseClock(relDayMatch[2]);
+        if (clk) {
+          const offsetDays = word === "сегодня" ? 0 : word === "завтра" ? 1 : 2;
+          const target = new Date(now);
+          target.setDate(now.getDate() + offsetDays);
+          target.setHours(clk.hh, clk.mm, 0, 0);
+          // Для "сегодня" допускаем небольшую погрешность до -1 мин, чтобы не мешало сразу после ввода
+          if (target.getTime() > nowMs - 60 * 1000) {
+            return { ts: target.getTime(), matchedPhrase: relDayMatch[0].trim() };
+          }
+        }
+      }
+
+      // 5. День недели ("в пятницу в 14:00", "в пн 10:30")
+      const weekdayMap = {
+        "вс": 0, "воскресенье": 0,
+        "пн": 1, "понедельник": 1,
+        "вт": 2, "вторник": 2,
+        "ср": 3, "среда": 3, "среду": 3,
+        "чт": 4, "четверг": 4,
+        "пт": 5, "пятница": 5, "пятницу": 5,
+        "сб": 6, "суббота": 6, "субботу": 6
+      };
+      const wdMatch = text.match(/\b(?:в\s+)?(понедельник|вторник|среду|среда|четверг|пятницу|пятница|субботу|суббота|воскресенье|пн|вт|ср|чт|пт|сб|вс)(?:\s+(?:в|к|на))?\s+(\d{1,2}(?:[:.]\d{2})?)\b/i);
+      if (wdMatch) {
+        const targetWd = weekdayMap[wdMatch[1].toLowerCase()];
+        const clk = parseClock(wdMatch[2]);
+        if (targetWd !== undefined && clk) {
+          const target = new Date(now);
+          let diff = (targetWd - now.getDay() + 7) % 7;
+          target.setDate(now.getDate() + diff);
+          target.setHours(clk.hh, clk.mm, 0, 0);
+          if (target.getTime() <= nowMs) {
+            target.setDate(target.getDate() + 7);
+          }
+          return { ts: target.getTime(), matchedPhrase: wdMatch[0].trim() };
+        }
+      }
+
+      // 6. Явное время вида "в 12:30" или "на 15:00" без указания дня (считаем на сегодня, если ещё не прошло)
+      const timeOnlyMatch = text.match(/\b(?:в|к|на)\s+(\d{1,2}:\d{2})\b/i);
+      if (timeOnlyMatch) {
+        const clk = parseClock(timeOnlyMatch[1]);
+        if (clk) {
+          const target = new Date(now);
+          target.setHours(clk.hh, clk.mm, 0, 0);
+          if (target.getTime() > nowMs - 60 * 1000) {
+            return { ts: target.getTime(), matchedPhrase: timeOnlyMatch[0].trim() };
+          }
+        }
+      }
+
+      return null;
+    }
+
+    function updateSmartTimeHint(note) {
+      if (!note) {
+        currentSmartSuggestion = null;
+        smartTimeHintEl.classList.remove("visible");
+        return;
+      }
+
+      // Не предлагаем авто-время, если напоминание уже задано на эту заметку
+      if (note.remindAt) {
+        currentSmartSuggestion = null;
+        smartTimeHintEl.classList.remove("visible");
+        return;
+      }
+
+      const combinedText = `${note.title || ""}\n${note.body || ""}`.trim();
+      const dismissedText = dismissedHintForText.get(note.id);
+      if (dismissedText && dismissedText === combinedText) {
+        currentSmartSuggestion = null;
+        smartTimeHintEl.classList.remove("visible");
+        return;
+      }
+
+      const parsed = parseReminderFromText(combinedText, Date.now());
+      if (!parsed) {
+        currentSmartSuggestion = null;
+        smartTimeHintEl.classList.remove("visible");
+        return;
+      }
+
+      currentSmartSuggestion = {
+        ts: parsed.ts,
+        matchedPhrase: parsed.matchedPhrase,
+        sourceText: combinedText
+      };
+
+      smartMatchTextEl.textContent = `«${parsed.matchedPhrase}»`;
+      smartParsedLabelEl.textContent = formatReminderShort(parsed.ts);
+      smartTimeHintEl.classList.add("visible");
+    }
+
+    function isReminderDue(note) {
+      return Boolean(note.remindAt) && !note.remindedDone && note.remindAt <= Date.now();
+    }
+
+    function playChime() {
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        const notesFreq = [587.33, 880];
+        notesFreq.forEach((freq, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = "sine";
+          osc.frequency.value = freq;
+          const start = ctx.currentTime + idx * 0.16;
+          gain.gain.setValueAtTime(0.001, start);
+          gain.gain.exponentialRampToValueAtTime(0.08, start + 0.03);
+          gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.35);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(start);
+          osc.stop(start + 0.36);
+        });
+      } catch {}
+    }
+
+    function updateNotifButton() {
+      if (!("Notification" in window)) {
+        btnNotifPermEl.textContent = "🔔 Нет API";
+        btnNotifPermEl.disabled = true;
+        return;
+      }
+      if (Notification.permission === "granted") {
+        btnNotifPermEl.textContent = "🔔 Вкл";
+        btnNotifPermEl.classList.add("granted");
+      } else if (Notification.permission === "denied") {
+        btnNotifPermEl.textContent = "🔕 Запрещено";
+        btnNotifPermEl.classList.remove("granted");
+      } else {
+        btnNotifPermEl.textContent = "🔔 Уведомления";
+        btnNotifPermEl.classList.remove("granted");
+      }
+    }
+
+    async function requestNotifPermission() {
+      if (!("Notification" in window)) return;
+      try {
+        await Notification.requestPermission();
+        updateNotifButton();
+        if (Notification.permission === "granted") {
+          playChime();
+        }
+      } catch {
+        updateNotifButton();
+      }
+    }
+
+    function triggerSystemNotification(note) {
+      if (!("Notification" in window) || Notification.permission !== "granted") return;
+      const key = `${note.id}_${note.remindAt}`;
+      if (notifiedThisSession.has(key)) return;
+      notifiedThisSession.add(key);
+
+      try {
+        const title = note.title.trim() || "Напоминание";
+        const body = note.body.trim() || "Пора проверить заметку";
+        const n = new Notification(title, {
+          body: body.slice(0, 140),
+          tag: key
+        });
+        n.onclick = () => {
+          window.focus();
+          openEditor(note.id);
+          n.close();
+        };
+      } catch {}
+    }
+
+    function checkRemindersTick() {
+      let anyFired = false;
+      notes.forEach(note => {
+        if (note.deleted) return;
+        if (isReminderDue(note)) {
+          const key = `${note.id}_${note.remindAt}`;
+          if (!notifiedThisSession.has(key)) {
+            anyFired = true;
+            triggerSystemNotification(note);
+          }
+        }
+      });
+      if (anyFired) {
+        playChime();
+      }
+      renderList();
+      const active = getActiveNote();
+      if (active) {
+        syncReminderEditorUI(active);
+        updateSmartTimeHint(active);
+      }
+    }
+
+    function setSyncState(state) {
+      if (state === "saving") {
+        syncStatusEl.textContent = "Сохранение...";
+        syncStatusEl.classList.add("saving");
+      } else {
+        syncStatusEl.textContent = "Сохранено";
+        syncStatusEl.classList.remove("saving");
+      }
+    }
+
+    function schedulePersist() {
+      setSyncState("saving");
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => {
+        StorageAdapter.save(notes);
+        setSyncState("saved");
+      }, 300);
+    }
+
+    function persistNow() {
+      clearTimeout(saveTimer);
+      StorageAdapter.save(notes);
+      setSyncState("saved");
+    }
+
+    function getActiveNote() {
+      return notes.find(n => n.id === activeNoteId && !n.deleted) || null;
+    }
+
+    function setNoteReminder(note, newTs) {
+      if (!note) return;
+      note.remindAt = newTs || null;
+      note.remindedDone = false;
+      note.updatedAt = Date.now();
+      if (newTs) {
+        notifiedThisSession.delete(`${note.id}_${newTs}`);
+        reminderPanelOpen = true;
+      }
+      persistNow();
+      syncReminderEditorUI(note);
+      updateSmartTimeHint(note);
+      renderList();
+    }
+
+    function snoozeNote(noteId, minutes) {
+      const note = notes.find(n => n.id === noteId && !n.deleted);
+      if (!note) return;
+      const base = Math.max(Date.now(), note.remindAt || Date.now());
+      setNoteReminder(note, base + minutes * 60 * 1000);
+    }
+
+    function completeReminder(noteId) {
+      const note = notes.find(n => n.id === noteId && !n.deleted);
+      if (!note) return;
+      note.remindedDone = true;
+      note.updatedAt = Date.now();
+      persistNow();
+      if (activeNoteId === note.id) syncReminderEditorUI(note);
+      renderList();
+    }
+
+    function syncReminderEditorUI(note) {
+      const hasRem = Boolean(note.remindAt);
+      btnToggleReminderEl.classList.toggle("active", hasRem || reminderPanelOpen);
+      btnToggleReminderEl.textContent = hasRem
+        ? `⏰ ${formatReminderShort(note.remindAt)}`
+        : "⏰ Напомнить";
+
+      reminderPanelEl.classList.toggle("open", reminderPanelOpen || hasRem);
+      remindDtInputEl.value = note.remindAt ? toDatetimeLocalValue(note.remindAt) : "";
+
+      const due = isReminderDue(note);
+      reminderPanelEl.classList.toggle("due", due);
+      dueBannerEl.classList.toggle("visible", due);
+      if (due) {
+        dueBannerTextEl.textContent = `Напоминание сработало (${formatReminderShort(note.remindAt)})`;
+      }
+    }
+
+    function createNote() {
+      const newNote = {
+        id: generateId(),
+        title: "",
+        body: "",
+        checklist: [],
+        pinned: false,
+        remindAt: null,
+        remindedDone: false,
+        updatedAt: Date.now(),
+        deleted: false
+      };
+      notes.unshift(newNote);
+      activeNoteId = newNote.id;
+      reminderPanelOpen = false;
+      persistNow();
+      renderList();
+      openEditor(newNote.id, true);
+    }
+
+    function openEditor(id, focusTitle = false) {
+      activeNoteId = id;
+      const note = getActiveNote();
+      if (!note) {
+        editorToolbarEl.style.display = "none";
+        editorBodyEl.style.display = "none";
+        editorPlaceholderEl.style.display = "flex";
+        appEl.classList.remove("mobile-editing");
+        updateSmartTimeHint(null);
+        return;
+      }
+
+      editorPlaceholderEl.style.display = "none";
+      editorToolbarEl.style.display = "flex";
+      editorBodyEl.style.display = "flex";
+      appEl.classList.add("mobile-editing");
+
+      noteTitleEl.value = note.title;
+      noteTextEl.value = note.body;
+      btnPinEl.classList.toggle("active", Boolean(note.pinned));
+      btnPinEl.textContent = note.pinned ? "📌 Закреплено" : "📌 Закрепить";
+
+      reminderPanelOpen = Boolean(note.remindAt);
+      syncReminderEditorUI(note);
+      updateSmartTimeHint(note);
+      renderChecklist(note);
+      renderList();
+
+      if (focusTitle) {
+        setTimeout(() => noteTitleEl.focus(), 50);
+      }
+    }
+
+    function closeMobileEditor() {
+      persistNow();
+      appEl.classList.remove("mobile-editing");
+    }
+
+    function renderChecklist(note) {
+      const items = note.checklist || [];
+      if (items.length === 0) {
+        checklistBoxEl.style.display = "none";
+        checklistBoxEl.innerHTML = "";
+        return;
+      }
+      checklistBoxEl.style.display = "flex";
+      checklistBoxEl.innerHTML = "";
+
+      items.forEach((item, idx) => {
+        const row = document.createElement("div");
+        row.className = "chk-row" + (item.done ? " done" : "");
+
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.checked = Boolean(item.done);
+        cb.addEventListener("change", () => {
+          item.done = cb.checked;
+          note.updatedAt = Date.now();
+          schedulePersist();
+          renderChecklist(note);
+          renderList();
+        });
+
+        const input = document.createElement("input");
+        input.type = "text";
+        input.className = "chk-text";
+        input.value = item.text;
+        input.placeholder = "Пункт списка...";
+        input.addEventListener("input", () => {
+          item.text = input.value;
+          note.updatedAt = Date.now();
+          schedulePersist();
+        });
+        input.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            addChecklistItem(true);
+          }
+        });
+
+        const delBtn = document.createElement("button");
+        delBtn.className = "chk-del";
+        delBtn.textContent = "×";
+        delBtn.title = "Удалить пункт";
+        delBtn.addEventListener("click", () => {
+          note.checklist.splice(idx, 1);
+          note.updatedAt = Date.now();
+          schedulePersist();
+          renderChecklist(note);
+          renderList();
+        });
+
+        row.append(cb, input, delBtn);
+        checklistBoxEl.appendChild(row);
+      });
+    }
+
+    function addChecklistItem(focusLast = false) {
+      const note = getActiveNote();
+      if (!note) return;
+      if (!Array.isArray(note.checklist)) note.checklist = [];
+      note.checklist.push({
+        id: "chk_" + Date.now() + "_" + Math.random().toString(36).slice(2, 5),
+        text: "",
+        done: false
+      });
+      note.updatedAt = Date.now();
+      schedulePersist();
+      renderChecklist(note);
+      if (focusLast) {
+        const inputs = checklistBoxEl.querySelectorAll(".chk-text");
+        if (inputs.length) inputs[inputs.length - 1].focus();
+      }
+    }
+
+    function renderList() {
+      const q = searchQuery.trim().toLowerCase();
+      const visible = notes
+        .filter(n => !n.deleted)
+        .filter(n => {
+          if (onlyReminders && !n.remindAt) return false;
+          if (!q) return true;
+          const inTitle = (n.title || "").toLowerCase().includes(q);
+          const inBody = (n.body || "").toLowerCase().includes(q);
+          const inChk = (n.checklist || []).some(c => (c.text || "").toLowerCase().includes(q));
+          return inTitle || inBody || inChk;
+        })
+        .sort((a, b) => {
+          const aDue = isReminderDue(a);
+          const bDue = isReminderDue(b);
+          if (aDue !== bDue) return aDue ? -1 : 1;
+
+          if (Boolean(a.pinned) !== Boolean(b.pinned)) {
+            return a.pinned ? -1 : 1;
+          }
+          return (b.updatedAt || 0) - (a.updatedAt || 0);
+        });
+
+      notesListEl.innerHTML = "";
+
+      if (visible.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "empty-list";
+        empty.textContent = onlyReminders
+          ? "Нет заметок с напоминаниями"
+          : q
+            ? "Ничего не найдено по запросу"
+            : "Пока нет заметок. Нажмите «+», чтобы создать первую.";
+        notesListEl.appendChild(empty);
+        return;
+      }
+
+      visible.forEach(note => {
+        const due = isReminderDue(note);
+        const card = document.createElement("div");
+        card.className =
+          "note-card" +
+          (note.id === activeNoteId ? " active" : "") +
+          (due ? " due" : "");
+
+        const top = document.createElement("div");
+        top.className = "note-card-top";
+
+        const title = document.createElement("div");
+        title.className = "note-card-title";
+        title.textContent = note.title.trim() || "Без заголовка";
+        top.appendChild(title);
+
+        const rightBadges = document.createElement("div");
+        rightBadges.className = "badges-right";
+
+        if (note.pinned) {
+          const pin = document.createElement("span");
+          pin.className = "pin-mark";
+          pin.textContent = "📌";
+          rightBadges.appendChild(pin);
+        }
+
+        if (note.remindAt) {
+          const remBadge = document.createElement("span");
+          remBadge.className = "rem-tag" + (due ? " due" : note.remindedDone ? " done" : "");
+          remBadge.textContent = due
+            ? `⏰ Пора (${formatReminderShort(note.remindAt)})`
+            : note.remindedDone
+              ? "✓ Напомнено"
+              : `⏰ ${formatReminderShort(note.remindAt)}`;
+          rightBadges.appendChild(remBadge);
+        }
+
+        top.appendChild(rightBadges);
+
+        const preview = document.createElement("div");
+        preview.className = "note-card-preview";
+        const chkCount = (note.checklist || []).length;
+        const chkDone = (note.checklist || []).filter(c => c.done).length;
+        if (note.body.trim()) {
+          preview.textContent = note.body.trim();
+        } else if (chkCount > 0) {
+          preview.textContent = `Чек-лист: выполнено ${chkDone} из ${chkCount}`;
+        } else {
+          preview.textContent = "Пустая заметка";
+        }
+
+        const meta = document.createElement("div");
+        meta.className = "note-card-meta";
+        meta.innerHTML = `<span>${chkCount > 0 ? `☑ ${chkDone}/${chkCount}` : ""}</span><span>${formatTime(note.updatedAt)}</span>`;
+
+        card.append(top, preview, meta);
+
+        if (due) {
+          const snoozeRow = document.createElement("div");
+          snoozeRow.className = "quick-snooze-inline";
+          snoozeRow.addEventListener("click", e => e.stopPropagation());
+
+          const b15 = document.createElement("button");
+          b15.type = "button";
+          b15.className = "mini-act-btn";
+          b15.textContent = "+15 мин";
+          b15.onclick = () => snoozeNote(note.id, 15);
+
+          const b60 = document.createElement("button");
+          b60.type = "button";
+          b60.className = "mini-act-btn";
+          b60.textContent = "+1 ч";
+          b60.onclick = () => snoozeNote(note.id, 60);
+
+          const bDone = document.createElement("button");
+          bDone.type = "button";
+          bDone.className = "mini-act-btn";
+          bDone.textContent = "Готово";
+          bDone.onclick = () => completeReminder(note.id);
+
+          snoozeRow.append(b15, b60, bDone);
+          card.appendChild(snoozeRow);
+        }
+
+        card.addEventListener("click", () => openEditor(note.id));
+        notesListEl.appendChild(card);
+      });
+    }
+
+    // События ввода и кнопок
+    noteTitleEl.addEventListener("input", () => {
+      const note = getActiveNote();
+      if (!note) return;
+      note.title = noteTitleEl.value;
+      note.updatedAt = Date.now();
+      schedulePersist();
+      updateSmartTimeHint(note);
+      renderList();
+    });
+
+    noteTextEl.addEventListener("input", () => {
+      const note = getActiveNote();
+      if (!note) return;
+      note.body = noteTextEl.value;
+      note.updatedAt = Date.now();
+      schedulePersist();
+      updateSmartTimeHint(note);
+      renderList();
+    });
+
+    document.getElementById("btnApplySmartTime").addEventListener("click", () => {
+      const note = getActiveNote();
+      if (!note || !currentSmartSuggestion) return;
+      setNoteReminder(note, currentSmartSuggestion.ts);
+    });
+
+    document.getElementById("btnDismissSmartTime").addEventListener("click", () => {
+      const note = getActiveNote();
+      if (!note || !currentSmartSuggestion) return;
+      dismissedHintForText.set(note.id, currentSmartSuggestion.sourceText);
+      updateSmartTimeHint(note);
+    });
+
+    searchInputEl.addEventListener("input", () => {
+      searchQuery = searchInputEl.value;
+      renderList();
+    });
+
+    filterAllEl.addEventListener("click", () => {
+      onlyReminders = false;
+      filterAllEl.classList.add("active");
+      filterRemindersEl.classList.remove("active");
+      renderList();
+    });
+
+    filterRemindersEl.addEventListener("click", () => {
+      onlyReminders = true;
+      filterRemindersEl.classList.add("active");
+      filterAllEl.classList.remove("active");
+      renderList();
+    });
+
+    btnNotifPermEl.addEventListener("click", requestNotifPermission);
+
+    btnToggleReminderEl.addEventListener("click", () => {
+      const note = getActiveNote();
+      if (!note) return;
+      reminderPanelOpen = !reminderPanelOpen;
+      if (reminderPanelOpen && !note.remindAt) {
+        const defaultTs = currentSmartSuggestion ? currentSmartSuggestion.ts : Date.now() + 60 * 60 * 1000;
+        remindDtInputEl.value = toDatetimeLocalValue(defaultTs);
+      }
+      syncReminderEditorUI(note);
+    });
+
+    remindDtInputEl.addEventListener("change", () => {
+      const note = getActiveNote();
+      if (!note) return;
+      const val = remindDtInputEl.value;
+      if (!val) {
+        setNoteReminder(note, null);
+        return;
+      }
+      const ts = new Date(val).getTime();
+      if (!Number.isNaN(ts)) {
+        setNoteReminder(note, ts);
+      }
+    });
+
+    document.getElementById("preset1h").addEventListener("click", () => {
+      const note = getActiveNote();
+      if (!note) return;
+      setNoteReminder(note, Date.now() + 60 * 60 * 1000);
+    });
+
+    document.getElementById("presetTomorrow").addEventListener("click", () => {
+      const note = getActiveNote();
+      if (!note) return;
+      const d = new Date();
+      d.setDate(d.getDate() + 1);
+      d.setHours(9, 0, 0, 0);
+      setNoteReminder(note, d.getTime());
+    });
+
+    document.getElementById("clearReminder").addEventListener("click", () => {
+      const note = getActiveNote();
+      if (!note) return;
+      reminderPanelOpen = false;
+      setNoteReminder(note, null);
+    });
+
+    document.getElementById("snooze15").addEventListener("click", () => {
+      const note = getActiveNote();
+      if (note) snoozeNote(note.id, 15);
+    });
+
+    document.getElementById("snooze60").addEventListener("click", () => {
+      const note = getActiveNote();
+      if (note) snoozeNote(note.id, 60);
+    });
+
+    document.getElementById("markRemDone").addEventListener("click", () => {
+      const note = getActiveNote();
+      if (note) completeReminder(note.id);
+    });
+
+    document.getElementById("btnNewDesktop").addEventListener("click", createNote);
+    document.getElementById("btnNewMobile").addEventListener("click", createNote);
+    document.getElementById("btnNewEmpty").addEventListener("click", createNote);
+    document.getElementById("btnBack").addEventListener("click", closeMobileEditor);
+
+    btnPinEl.addEventListener("click", () => {
+      const note = getActiveNote();
+      if (!note) return;
+      note.pinned = !note.pinned;
+      note.updatedAt = Date.now();
+      persistNow();
+      openEditor(note.id);
+    });
+
+    document.getElementById("btnAddCheck").addEventListener("click", () => addChecklistItem(true));
+
+    btnCopyEl.addEventListener("click", async () => {
+      const note = getActiveNote();
+      if (!note) return;
+      const parts = [];
+      if (note.title.trim()) parts.push(note.title.trim());
+      if (note.body.trim()) parts.push(note.body.trim());
+      if (note.checklist && note.checklist.length) {
+        parts.push(
+          note.checklist
+            .map(c => `${c.done ? "[x]" : "[ ]"} ${c.text}`)
+            .join("\n")
+        );
+      }
+      try {
+        await navigator.clipboard.writeText(parts.join("\n\n"));
+        const old = btnCopyEl.textContent;
+        btnCopyEl.textContent = "Скопировано ✓";
+        setTimeout(() => (btnCopyEl.textContent = old), 1400);
+      } catch {
+        alert("Не удалось скопировать текст");
+      }
+    });
+
+    document.getElementById("btnDelete").addEventListener("click", () => {
+      const note = getActiveNote();
+      if (!note) return;
+      if (!confirm("Удалить эту заметку?")) return;
+      note.deleted = true;
+      note.updatedAt = Date.now();
+      persistNow();
+
+      const next = notes.find(n => !n.deleted);
+      activeNoteId = next ? next.id : null;
+      renderList();
+      if (window.innerWidth <= 760) {
+        appEl.classList.remove("mobile-editing");
+      } else {
+        openEditor(activeNoteId);
+      }
+    });
+
+    // Инициализация
+    updateNotifButton();
+    renderList();
+    if (window.innerWidth > 760) {
+      const first = notes.filter(n => !n.deleted).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0];
+      if (first) openEditor(first.id);
+    }
+    checkRemindersTick();
+    setInterval(checkRemindersTick, 20000);
+  </script>
+</body>
+</html>
