@@ -92,9 +92,11 @@
       display: flex;
       align-items: center;
       gap: 6px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
     }
 
-    .notif-btn {
+    .notif-btn, .auth-btn {
       background: rgba(255, 255, 255, 0.05);
       border: 1px solid var(--border);
       color: var(--text-secondary);
@@ -106,7 +108,7 @@
       white-space: nowrap;
     }
 
-    .notif-btn:hover {
+    .notif-btn:hover, .auth-btn:hover {
       color: var(--text-primary);
       border-color: var(--border-active);
     }
@@ -131,6 +133,12 @@
       background: rgba(250, 204, 21, 0.12);
       color: var(--accent-warn);
       border-color: rgba(250, 204, 21, 0.28);
+    }
+
+    .sync-badge.offline {
+      background: rgba(248, 113, 113, 0.14);
+      color: var(--accent-danger);
+      border-color: rgba(248, 113, 113, 0.35);
     }
 
     .search-row {
@@ -408,7 +416,6 @@
       margin: 0 auto;
     }
 
-    /* Умная подсказка распознанного времени из текста */
     .smart-time-hint {
       display: none;
       align-items: center;
@@ -466,7 +473,6 @@
       cursor: pointer;
     }
 
-    /* Блок напоминания в редакторе */
     .reminder-panel {
       display: none;
       flex-direction: column;
@@ -578,7 +584,6 @@
       color: var(--text-muted);
     }
 
-    /* Чек-лист внутри заметки */
     .checklist-box {
       display: flex;
       flex-direction: column;
@@ -642,6 +647,65 @@
       gap: 12px;
       padding: 24px;
       text-align: center;
+    }
+
+    /* Экран входа в аккаунт Firebase */
+    .auth-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      background: rgba(11, 13, 20, 0.92);
+      backdrop-filter: blur(14px);
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .auth-overlay.visible {
+      display: flex;
+    }
+
+    .auth-card {
+      width: 100%;
+      max-width: 380px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 24px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      text-align: center;
+    }
+
+    .auth-card h2 {
+      margin: 0;
+      font-size: 19px;
+    }
+
+    .auth-card p {
+      margin: 0;
+      font-size: 13.5px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .btn-google {
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-violet));
+      color: #fff;
+      border: none;
+      border-radius: 11px;
+      padding: 11px 16px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .auth-error {
+      font-size: 12.5px;
+      color: var(--accent-danger);
+      min-height: 18px;
     }
 
     .fab-new {
@@ -709,7 +773,6 @@
 </head>
 <body>
   <div class="app" id="app">
-    <!-- Список заметок -->
     <aside class="sidebar">
       <div class="sidebar-header">
         <div class="brand">
@@ -718,7 +781,8 @@
         </div>
         <div class="header-actions">
           <button class="notif-btn" id="btnNotifPerm" title="Разрешить системные уведомления">🔔 Уведомления</button>
-          <span class="sync-badge" id="syncStatus">Сохранено</span>
+          <span class="sync-badge" id="syncStatus">Локально</span>
+          <button class="auth-btn" id="btnAuthAction" style="display: none;" title="Войти или выйти из аккаунта">Войти</button>
         </div>
       </div>
 
@@ -741,7 +805,6 @@
       <div class="notes-list" id="notesList"></div>
     </aside>
 
-    <!-- Редактор -->
     <main class="editor-pane" id="editorPane">
       <div class="editor-toolbar" id="editorToolbar" style="display: none;">
         <div class="toolbar-left">
@@ -757,7 +820,6 @@
       </div>
 
       <div class="editor-body" id="editorBody" style="display: none;">
-        <!-- Умная подсказка распознанного времени -->
         <div class="smart-time-hint" id="smartTimeHint">
           <div class="smart-hint-left">
             <span>💡 В тексте найдено:</span>
@@ -811,29 +873,88 @@
     <button class="fab-new" id="btnNewMobile" title="Новая заметка">+</button>
   </div>
 
-  <script>
-    const STORAGE_KEY = "notes_app_v1";
+  <!-- Экран входа через Google -->
+  <div class="auth-overlay" id="authOverlay">
+    <div class="auth-card">
+      <h2>Синхронизация заметок</h2>
+      <p>Войдите через Google, чтобы заметки и напоминания автоматически синхронизировались между ПК и телефоном.</p>
+      <button type="button" class="btn-google" id="btnGoogleSignIn">Войти через Google</button>
+      <div class="auth-error" id="authError"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+    import {
+      getAuth,
+      GoogleAuthProvider,
+      signInWithPopup,
+      signInWithRedirect,
+      signOut,
+      onAuthStateChanged,
+      setPersistence,
+      browserLocalPersistence
+    } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+    import {
+      getFirestore,
+      collection,
+      doc,
+      setDoc,
+      query,
+      where,
+      onSnapshot
+    } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+    // Подставь сюда конфиг своего проекта из консоли Firebase
+    const FIREBASE_CONFIG = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    const isFirebaseConfigured = Boolean(
+      FIREBASE_CONFIG.apiKey &&
+      !FIREBASE_CONFIG.apiKey.startsWith("YOUR_") &&
+      FIREBASE_CONFIG.projectId &&
+      !FIREBASE_CONFIG.projectId.startsWith("YOUR_")
+    );
+
+    const BASE_STORAGE_KEY = "notes_app_v1";
+    let currentUser = null;
+    let db = null;
+    let auth = null;
+    let unsubscribeNotes = null;
+    let isApplyingCloudSnapshot = false;
 
     const StorageAdapter = {
-      load() {
+      keyForUser(uid) {
+        return uid ? `${BASE_STORAGE_KEY}_${uid}` : `${BASE_STORAGE_KEY}_guest`;
+      },
+      load(uid = currentUser?.uid) {
         try {
-          const raw = localStorage.getItem(STORAGE_KEY);
+          const raw = localStorage.getItem(this.keyForUser(uid));
           return raw ? JSON.parse(raw) : [];
         } catch {
           return [];
         }
       },
-      save(notes) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
+      save(items, uid = currentUser?.uid) {
+        try {
+          localStorage.setItem(this.keyForUser(uid), JSON.stringify(items));
+        } catch {}
       }
     };
 
-    let notes = StorageAdapter.load();
+    let notes = StorageAdapter.load("guest");
     let activeNoteId = null;
     let searchQuery = "";
     let onlyReminders = false;
     let reminderPanelOpen = false;
     let saveTimer = null;
+    const dirtyNoteIds = new Set();
     let currentSmartSuggestion = null;
     const dismissedHintForText = new Map();
     const notifiedThisSession = new Set();
@@ -843,6 +964,9 @@
     const searchInputEl = document.getElementById("searchInput");
     const syncStatusEl = document.getElementById("syncStatus");
     const btnNotifPermEl = document.getElementById("btnNotifPerm");
+    const btnAuthActionEl = document.getElementById("btnAuthAction");
+    const authOverlayEl = document.getElementById("authOverlay");
+    const authErrorEl = document.getElementById("authError");
 
     const filterAllEl = document.getElementById("filterAll");
     const filterRemindersEl = document.getElementById("filterReminders");
@@ -902,85 +1026,343 @@
       return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
     }
 
-    function parseReminderFromText(fullText, nowMs = Date.now()) {
-  const text = (fullText || "").trim();
-  if (!text) return null;
-  const now = new Date(nowMs);
-
-  // 1. Через полчаса
-  const halfHour = text.match(/(?:^|[\s(,;—-])через\s+полчаса(?:[\s).,;!?:—-]|$)/i);
-  if (halfHour) {
-    return { ts: nowMs + 30 * 60 * 1000, matchedPhrase: halfHour[0].trim() };
-  }
-
-  // 2. Через N минут / часов
-  const rel = text.match(/(?:^|[\s(,;—-])через\s+(\d{1,3})\s*(мин|минуты|минут|ч|час|часа|часов)(?:[\s).,;!?:—-]|$)/i);
-  if (rel) {
-    const n = parseInt(rel[1], 10);
-    if (n > 0) {
-      const ms = rel[2].toLowerCase().startsWith("м") ? n * 60000 : n * 3600000;
-      return { ts: nowMs + ms, matchedPhrase: rel[0].trim() };
-    }
-  }
-
-  const getClock = (rawTime, dayPeriod = "") => {
-    const m = (rawTime || "").trim().match(/^(\d{1,2})(?:[:.](\d{2}))?$/);
-    if (!m) return null;
-    let hh = parseInt(m[1], 10);
-    const mm = m[2] ? parseInt(m[2], 10) : 0;
-    const p = (dayPeriod || "").toLowerCase();
-    if ((p.startsWith("вечер") || p.startsWith("дня")) && hh >= 1 && hh <= 11) {
-      hh += 12;
-    }
-    return (hh <= 23 && mm <= 59) ? { hh, mm } : null;
-  };
-
-  // 3. Явная дата ДД.ММ[.ГГГГ] с опциональным временем
-  const dateMatch = text.match(/(?:^|[\s(,;—-])(\d{1,2})\.(\d{1,2})(?:\.(\d{2,4}))?(?:\s*(?:в|к|на)?\s*(\d{1,2}(?:[:.]\d{2})?))?(?:[\s).,;!?:—-]|$)/i);
-  if (dateMatch) {
-    const day = parseInt(dateMatch[1], 10);
-    const month = parseInt(dateMatch[2], 10) - 1;
-    let year = dateMatch[3] ? parseInt(dateMatch[3], 10) : now.getFullYear();
-    if (year < 100) year += 2000;
-    const clk = dateMatch[4] ? getClock(dateMatch[4]) : { hh: 9, mm: 0 };
-    if (clk && month >= 0 && month <= 11 && day >= 1 && day <= 31) {
-      let target = new Date(year, month, day, clk.hh, clk.mm, 0, 0);
-      if (!dateMatch[3] && target.getTime() < nowMs - 24 * 60 * 60 * 1000) {
-        target = new Date(year + 1, month, day, clk.hh, clk.mm, 0, 0);
+    function setSyncState(state, customText) {
+      syncStatusEl.classList.remove("saving", "offline");
+      if (state === "saving") {
+        syncStatusEl.textContent = customText || "Сохранение...";
+        syncStatusEl.classList.add("saving");
+      } else if (state === "offline") {
+        syncStatusEl.textContent = customText || "Офлайн";
+        syncStatusEl.classList.add("offline");
+      } else if (state === "cloud") {
+        syncStatusEl.textContent = customText || "В облаке";
+      } else {
+        syncStatusEl.textContent = customText || "Локально";
       }
-      return { ts: target.getTime(), matchedPhrase: dateMatch[0].trim() };
     }
-  }
 
-  // 4. Сегодня / завтра / послезавтра + время
-  const relDay = text.match(/(?:^|[\s(,;—-])(сегодня|завтра|послезавтра)(?:\s+(?:в|к|на))?\s+(\d{1,2}(?:[:.]\d{2})?)(?:\s+(утра|дня|вечера))?(?:[\s).,;!?:—-]|$)/i);
-  if (relDay) {
-    const clk = getClock(relDay[2], relDay[3]);
-    if (clk) {
-      const w = relDay[1].toLowerCase();
-      const days = w === "завтра" ? 1 : w === "послезавтра" ? 2 : 0;
-      const target = new Date(now);
-      target.setDate(now.getDate() + days);
-      target.setHours(clk.hh, clk.mm, 0, 0);
-      return { ts: target.getTime(), matchedPhrase: relDay[0].trim() };
+    function normalizeNote(raw, ownerUid = currentUser?.uid || "") {
+      return {
+        id: String(raw.id || generateId()),
+        ownerUid: String(raw.ownerUid || ownerUid),
+        title: String(raw.title || ""),
+        body: String(raw.body || ""),
+        checklist: Array.isArray(raw.checklist)
+          ? raw.checklist.map((c, i) => ({
+              id: String(c.id || `chk_${i}`),
+              text: String(c.text || ""),
+              done: Boolean(c.done)
+            }))
+          : [],
+        pinned: Boolean(raw.pinned),
+        remindAt: typeof raw.remindAt === "number" ? raw.remindAt : null,
+        remindedDone: Boolean(raw.remindedDone),
+        updatedAt: typeof raw.updatedAt === "number" ? raw.updatedAt : Date.now(),
+        deleted: Boolean(raw.deleted)
+      };
     }
-  }
 
-  // 5. Время вида "в 12:30" или "в 18 вечера"
-  const timeOnly = text.match(/(?:^|[\s(,;—-])(?:в|к|на)\s+(\d{1,2}(?::\d{2})?)(?:\s+(утра|дня|вечера))?(?:[\s).,;!?:—-]|$)/i);
-  if (timeOnly) {
-    // Без двоеточия берем только если указано "утра/дня/вечера" или время >= 6
-    const hasColon = timeOnly[1].includes(":");
-    const clk = getClock(timeOnly[1], timeOnly[2]);
-    if (clk && (hasColon || timeOnly[2])) {
-      const target = new Date(now);
-      target.setHours(clk.hh, clk.mm, 0, 0);
-      return { ts: target.getTime(), matchedPhrase: timeOnly[0].trim() };
+    async function syncDirtyNotesToCloud() {
+      if (!isFirebaseConfigured || !db || !currentUser || !navigator.onLine) return;
+      const ids = Array.from(dirtyNoteIds);
+      if (ids.length === 0) return;
+
+      setSyncState("saving", "Синхрон...");
+      try {
+        for (const id of ids) {
+          const found = notes.find(n => n.id === id);
+          if (!found) {
+            dirtyNoteIds.delete(id);
+            continue;
+          }
+          const payload = normalizeNote(found, currentUser.uid);
+          await setDoc(doc(db, "notes", payload.id), payload, { merge: true });
+          dirtyNoteIds.delete(id);
+        }
+        setSyncState("cloud", "В облаке");
+      } catch {
+        setSyncState("offline", "Офлайн (кэш)");
+      }
     }
-  }
 
-  return null;
-}
+    function markNoteModified(note, immediateCloud = false) {
+      if (!note) return;
+      note.updatedAt = Date.now();
+      if (currentUser) note.ownerUid = currentUser.uid;
+      dirtyNoteIds.add(note.id);
+      StorageAdapter.save(notes);
+
+      if (!isFirebaseConfigured || !currentUser) {
+        setSyncState("local", "Сохранено");
+        return;
+      }
+
+      if (!navigator.onLine) {
+        setSyncState("offline", "Офлайн (кэш)");
+        return;
+      }
+
+      setSyncState("saving", "Сохранение...");
+      clearTimeout(saveTimer);
+      if (immediateCloud) {
+        syncDirtyNotesToCloud();
+      } else {
+        saveTimer = setTimeout(syncDirtyNotesToCloud, 600);
+      }
+    }
+
+    function mergeCloudSnapshot(cloudNotes) {
+      isApplyingCloudSnapshot = true;
+      try {
+        const byId = new Map();
+        notes.forEach(n => byId.set(n.id, normalizeNote(n, currentUser?.uid || "")));
+
+        cloudNotes.forEach(rawCloud => {
+          const cloudNote = normalizeNote(rawCloud, currentUser?.uid || "");
+          const localNote = byId.get(cloudNote.id);
+          const hasUnsyncedLocalEdit = dirtyNoteIds.has(cloudNote.id);
+
+          if (!localNote) {
+            byId.set(cloudNote.id, cloudNote);
+          } else if (hasUnsyncedLocalEdit && (localNote.updatedAt || 0) > (cloudNote.updatedAt || 0)) {
+            byId.set(cloudNote.id, localNote);
+          } else if ((cloudNote.updatedAt || 0) >= (localNote.updatedAt || 0)) {
+            dirtyNoteIds.delete(cloudNote.id);
+            byId.set(cloudNote.id, cloudNote);
+          }
+        });
+
+        notes = Array.from(byId.values());
+        StorageAdapter.save(notes);
+
+        const active = getActiveNote();
+        if (active && document.activeElement !== noteTitleEl && document.activeElement !== noteTextEl) {
+          noteTitleEl.value = active.title;
+          noteTextEl.value = active.body;
+          btnPinEl.classList.toggle("active", Boolean(active.pinned));
+          btnPinEl.textContent = active.pinned ? "📌 Закреплено" : "📌 Закрепить";
+          syncReminderEditorUI(active);
+          renderChecklist(active);
+        } else if (!active && activeNoteId) {
+          activeNoteId = null;
+          openEditor(null);
+        }
+
+        renderList();
+        if (dirtyNoteIds.size === 0) {
+          setSyncState("cloud", "В облаке");
+        }
+      } finally {
+        isApplyingCloudSnapshot = false;
+      }
+    }
+
+    function startCloudSubscription(uid) {
+      if (unsubscribeNotes) {
+        unsubscribeNotes();
+        unsubscribeNotes = null;
+      }
+      if (!db || !uid) return;
+
+      const q = query(collection(db, "notes"), where("ownerUid", "==", uid));
+      unsubscribeNotes = onSnapshot(
+        q,
+        (snap) => {
+          const items = [];
+          snap.forEach(d => items.push({ id: d.id, ...d.data() }));
+          mergeCloudSnapshot(items);
+          syncDirtyNotesToCloud();
+        },
+        () => {
+          setSyncState("offline", "Офлайн (кэш)");
+        }
+      );
+    }
+
+    async function initFirebase() {
+      if (!isFirebaseConfigured) {
+        btnAuthActionEl.style.display = "none";
+        setSyncState("local", "Локально");
+        return;
+      }
+
+      btnAuthActionEl.style.display = "inline-block";
+      const firebaseApp = initializeApp(FIREBASE_CONFIG);
+      auth = getAuth(firebaseApp);
+      db = getFirestore(firebaseApp);
+
+      try {
+        await setPersistence(auth, browserLocalPersistence);
+      } catch {}
+
+      onAuthStateChanged(auth, (user) => {
+        currentUser = user || null;
+        if (currentUser) {
+          authOverlayEl.classList.remove("visible");
+          authErrorEl.textContent = "";
+          btnAuthActionEl.textContent = "Выйти";
+          btnAuthActionEl.title = currentUser.email || "Аккаунт Google";
+
+          // Переносим гостевые заметки при первом входе, если у пользователя ещё пусто
+          const guestNotes = StorageAdapter.load("guest");
+          const userCached = StorageAdapter.load(currentUser.uid);
+          if (userCached.length > 0) {
+            notes = userCached.map(n => normalizeNote(n, currentUser.uid));
+          } else if (guestNotes.length > 0) {
+            notes = guestNotes.map(n => {
+              const normalized = normalizeNote(n, currentUser.uid);
+              dirtyNoteIds.add(normalized.id);
+              return normalized;
+            });
+            StorageAdapter.save(notes, currentUser.uid);
+          } else {
+            notes = [];
+          }
+
+          activeNoteId = null;
+          renderList();
+          if (window.innerWidth > 760) {
+            const first = notes
+              .filter(n => !n.deleted)
+              .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0];
+            if (first) openEditor(first.id);
+            else openEditor(null);
+          }
+
+          startCloudSubscription(currentUser.uid);
+          syncDirtyNotesToCloud();
+        } else {
+          if (unsubscribeNotes) {
+            unsubscribeNotes();
+            unsubscribeNotes = null;
+          }
+          btnAuthActionEl.textContent = "Войти";
+          setSyncState("local", "Войдите");
+          authOverlayEl.classList.add("visible");
+        }
+      });
+    }
+
+    async function handleGoogleLogin() {
+      if (!auth) return;
+      authErrorEl.textContent = "";
+      const provider = new GoogleAuthProvider();
+      try {
+        await signInWithPopup(auth, provider);
+      } catch (err) {
+        if (err?.code === "auth/popup-blocked" || err?.code === "auth/operation-not-supported-in-this-environment") {
+          await signInWithRedirect(auth, provider);
+        } else {
+          authErrorEl.textContent = err?.message || "Ошибка входа через Google";
+        }
+      }
+    }
+
+    async function handleSignOut() {
+      if (!auth) return;
+      await syncDirtyNotesToCloud();
+      await signOut(auth);
+    }
+
+    // Разбор даты/времени из текста
+    function parseReminderFromText(fullText, nowMs = Date.now()) {
+      const text = (fullText || "").trim();
+      if (!text) return null;
+      const now = new Date(nowMs);
+
+      const halfHour = text.match(/(?:^|[\s(,;—-])через\s+полчаса(?:[\s).,;!?:—-]|$)/i);
+      if (halfHour) {
+        return { ts: nowMs + 30 * 60 * 1000, matchedPhrase: halfHour[0].trim() };
+      }
+
+      const rel = text.match(/(?:^|[\s(,;—-])через\s+(\d{1,3})\s*(мин|минуты|минут|ч|час|часа|часов)(?:[\s).,;!?:—-]|$)/i);
+      if (rel) {
+        const n = parseInt(rel[1], 10);
+        if (n > 0) {
+          const ms = rel[2].toLowerCase().startsWith("м") ? n * 60000 : n * 3600000;
+          return { ts: nowMs + ms, matchedPhrase: rel[0].trim() };
+        }
+      }
+
+      const getClock = (rawTime, dayPeriod = "") => {
+        const m = (rawTime || "").trim().match(/^(\d{1,2})(?:[:.](\d{2}))?$/);
+        if (!m) return null;
+        let hh = parseInt(m[1], 10);
+        const mm = m[2] ? parseInt(m[2], 10) : 0;
+        const p = (dayPeriod || "").toLowerCase();
+        if ((p.startsWith("вечер") || p.startsWith("дня")) && hh >= 1 && hh <= 11) {
+          hh += 12;
+        }
+        return (hh <= 23 && mm <= 59) ? { hh, mm } : null;
+      };
+
+      const dateMatch = text.match(/(?:^|[\s(,;—-])(\d{1,2})\.(\d{1,2})(?:\.(\d{2,4}))?(?:\s*(?:в|к|на)?\s*(\d{1,2}(?:[:.]\d{2})?))?(?:[\s).,;!?:—-]|$)/i);
+      if (dateMatch) {
+        const day = parseInt(dateMatch[1], 10);
+        const month = parseInt(dateMatch[2], 10) - 1;
+        let year = dateMatch[3] ? parseInt(dateMatch[3], 10) : now.getFullYear();
+        if (year < 100) year += 2000;
+        const clk = dateMatch[4] ? getClock(dateMatch[4]) : { hh: 9, mm: 0 };
+        if (clk && month >= 0 && month <= 11 && day >= 1 && day <= 31) {
+          let target = new Date(year, month, day, clk.hh, clk.mm, 0, 0);
+          if (!dateMatch[3] && target.getTime() < nowMs - 24 * 60 * 60 * 1000) {
+            target = new Date(year + 1, month, day, clk.hh, clk.mm, 0, 0);
+          }
+          return { ts: target.getTime(), matchedPhrase: dateMatch[0].trim() };
+        }
+      }
+
+      const relDay = text.match(/(?:^|[\s(,;—-])(сегодня|завтра|послезавтра)(?:\s+(?:в|к|на))?\s+(\d{1,2}(?:[:.]\d{2})?)(?:\s+(утра|дня|вечера))?(?:[\s).,;!?:—-]|$)/i);
+      if (relDay) {
+        const clk = getClock(relDay[2], relDay[3]);
+        if (clk) {
+          const w = relDay[1].toLowerCase();
+          const days = w === "завтра" ? 1 : w === "послезавтра" ? 2 : 0;
+          const target = new Date(now);
+          target.setDate(now.getDate() + days);
+          target.setHours(clk.hh, clk.mm, 0, 0);
+          return { ts: target.getTime(), matchedPhrase: relDay[0].trim() };
+        }
+      }
+
+      const weekdayMap = {
+        "вс": 0, "воскресенье": 0,
+        "пн": 1, "понедельник": 1,
+        "вт": 2, "вторник": 2,
+        "ср": 3, "среда": 3, "среду": 3,
+        "чт": 4, "четверг": 4,
+        "пт": 5, "пятница": 5, "пятницу": 5,
+        "сб": 6, "суббота": 6, "субботу": 6
+      };
+      const wdMatch = text.match(/(?:^|[\s(,;—-])(?:в\s+)?(понедельник|вторник|среду|среда|четверг|пятницу|пятница|субботу|суббота|воскресенье|пн|вт|ср|чт|пт|сб|вс)(?:\s+(?:в|к|на))?\s+(\d{1,2}(?:[:.]\d{2})?)(?:[\s).,;!?:—-]|$)/i);
+      if (wdMatch) {
+        const targetWd = weekdayMap[wdMatch[1].toLowerCase()];
+        const clk = getClock(wdMatch[2]);
+        if (targetWd !== undefined && clk) {
+          const target = new Date(now);
+          let diff = (targetWd - now.getDay() + 7) % 7;
+          target.setDate(now.getDate() + diff);
+          target.setHours(clk.hh, clk.mm, 0, 0);
+          if (target.getTime() <= nowMs) {
+            target.setDate(target.getDate() + 7);
+          }
+          return { ts: target.getTime(), matchedPhrase: wdMatch[0].trim() };
+        }
+      }
+
+      const timeOnlyMatch = text.match(/(?:^|[\s(,;—-])(?:в|к|на)\s+(\d{1,2}(?::\d{2})?)(?:\s+(утра|дня|вечера))?(?:[\s).,;!?:—-]|$)/i);
+      if (timeOnlyMatch) {
+        const hasColon = timeOnlyMatch[1].includes(":");
+        const clk = getClock(timeOnlyMatch[1], timeOnlyMatch[2]);
+        if (clk && (hasColon || timeOnlyMatch[2])) {
+          const target = new Date(now);
+          target.setHours(clk.hh, clk.mm, 0, 0);
+          return { ts: target.getTime(), matchedPhrase: timeOnlyMatch[0].trim() };
+        }
+      }
+
+      return null;
+    }
 
     function updateSmartTimeHint(note) {
       if (!note || note.remindAt) {
@@ -1117,31 +1499,6 @@
       }
     }
 
-    function setSyncState(state) {
-      if (state === "saving") {
-        syncStatusEl.textContent = "Сохранение...";
-        syncStatusEl.classList.add("saving");
-      } else {
-        syncStatusEl.textContent = "Сохранено";
-        syncStatusEl.classList.remove("saving");
-      }
-    }
-
-    function schedulePersist() {
-      setSyncState("saving");
-      clearTimeout(saveTimer);
-      saveTimer = setTimeout(() => {
-        StorageAdapter.save(notes);
-        setSyncState("saved");
-      }, 300);
-    }
-
-    function persistNow() {
-      clearTimeout(saveTimer);
-      StorageAdapter.save(notes);
-      setSyncState("saved");
-    }
-
     function getActiveNote() {
       return notes.find(n => n.id === activeNoteId && !n.deleted) || null;
     }
@@ -1150,12 +1507,11 @@
       if (!note) return;
       note.remindAt = newTs || null;
       note.remindedDone = false;
-      note.updatedAt = Date.now();
       if (newTs) {
         notifiedThisSession.delete(`${note.id}_${newTs}`);
         reminderPanelOpen = true;
       }
-      persistNow();
+      markNoteModified(note, true);
       syncReminderEditorUI(note);
       updateSmartTimeHint(note);
       renderList();
@@ -1172,8 +1528,7 @@
       const note = notes.find(n => n.id === noteId && !n.deleted);
       if (!note) return;
       note.remindedDone = true;
-      note.updatedAt = Date.now();
-      persistNow();
+      markNoteModified(note, true);
       if (activeNoteId === note.id) syncReminderEditorUI(note);
       renderList();
     }
@@ -1197,8 +1552,9 @@
     }
 
     function createNote() {
-      const newNote = {
+      const newNote = normalizeNote({
         id: generateId(),
+        ownerUid: currentUser?.uid || "",
         title: "",
         body: "",
         checklist: [],
@@ -1207,11 +1563,11 @@
         remindedDone: false,
         updatedAt: Date.now(),
         deleted: false
-      };
+      });
       notes.unshift(newNote);
       activeNoteId = newNote.id;
       reminderPanelOpen = false;
-      persistNow();
+      markNoteModified(newNote, true);
       renderList();
       openEditor(newNote.id, true);
     }
@@ -1250,7 +1606,8 @@
     }
 
     function closeMobileEditor() {
-      persistNow();
+      const note = getActiveNote();
+      if (note) markNoteModified(note, true);
       appEl.classList.remove("mobile-editing");
     }
 
@@ -1273,8 +1630,7 @@
         cb.checked = Boolean(item.done);
         cb.addEventListener("change", () => {
           item.done = cb.checked;
-          note.updatedAt = Date.now();
-          schedulePersist();
+          markNoteModified(note, true);
           renderChecklist(note);
           renderList();
         });
@@ -1286,8 +1642,7 @@
         input.placeholder = "Пункт списка...";
         input.addEventListener("input", () => {
           item.text = input.value;
-          note.updatedAt = Date.now();
-          schedulePersist();
+          markNoteModified(note, false);
         });
         input.addEventListener("keydown", (e) => {
           if (e.key === "Enter") {
@@ -1302,8 +1657,7 @@
         delBtn.title = "Удалить пункт";
         delBtn.addEventListener("click", () => {
           note.checklist.splice(idx, 1);
-          note.updatedAt = Date.now();
-          schedulePersist();
+          markNoteModified(note, true);
           renderChecklist(note);
           renderList();
         });
@@ -1322,8 +1676,7 @@
         text: "",
         done: false
       });
-      note.updatedAt = Date.now();
-      schedulePersist();
+      markNoteModified(note, true);
       renderChecklist(note);
       if (focusLast) {
         const inputs = checklistBoxEl.querySelectorAll(".chk-text");
@@ -1457,22 +1810,23 @@
       });
     }
 
+    // Обработчики событий
     noteTitleEl.addEventListener("input", () => {
+      if (isApplyingCloudSnapshot) return;
       const note = getActiveNote();
       if (!note) return;
       note.title = noteTitleEl.value;
-      note.updatedAt = Date.now();
-      schedulePersist();
+      markNoteModified(note, false);
       updateSmartTimeHint(note);
       renderList();
     });
 
     noteTextEl.addEventListener("input", () => {
+      if (isApplyingCloudSnapshot) return;
       const note = getActiveNote();
       if (!note) return;
       note.body = noteTextEl.value;
-      note.updatedAt = Date.now();
-      schedulePersist();
+      markNoteModified(note, false);
       updateSmartTimeHint(note);
       renderList();
     });
@@ -1510,6 +1864,22 @@
     });
 
     btnNotifPermEl.addEventListener("click", requestNotifPermission);
+    document.getElementById("btnGoogleSignIn").addEventListener("click", handleGoogleLogin);
+    btnAuthActionEl.addEventListener("click", () => {
+      if (currentUser) handleSignOut();
+      else authOverlayEl.classList.add("visible");
+    });
+
+    window.addEventListener("online", () => {
+      if (currentUser) {
+        setSyncState("saving", "Синхрон...");
+        syncDirtyNotesToCloud();
+      }
+    });
+
+    window.addEventListener("offline", () => {
+      if (currentUser) setSyncState("offline", "Офлайн (кэш)");
+    });
 
     btnToggleReminderEl.addEventListener("click", () => {
       const note = getActiveNote();
@@ -1582,8 +1952,7 @@
       const note = getActiveNote();
       if (!note) return;
       note.pinned = !note.pinned;
-      note.updatedAt = Date.now();
-      persistNow();
+      markNoteModified(note, true);
       openEditor(note.id);
     });
 
@@ -1617,8 +1986,7 @@
       if (!note) return;
       if (!confirm("Удалить эту заметку?")) return;
       note.deleted = true;
-      note.updatedAt = Date.now();
-      persistNow();
+      markNoteModified(note, true);
 
       const next = notes.find(n => !n.deleted);
       activeNoteId = next ? next.id : null;
@@ -1630,12 +1998,14 @@
       }
     });
 
+    // Инициализация
     updateNotifButton();
     renderList();
-    if (window.innerWidth > 760) {
+    if (!isFirebaseConfigured && window.innerWidth > 760) {
       const first = notes.filter(n => !n.deleted).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0];
       if (first) openEditor(first.id);
     }
+    initFirebase();
     checkRemindersTick();
     setInterval(checkRemindersTick, 20000);
   </script>
